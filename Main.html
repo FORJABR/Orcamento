@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forja · Precificação 3D</title>
+<style>
+html,body{height:100%;margin:0;background:#14161B}
+.forja-app *{box-sizing:border-box;margin:0;padding:0}
+.forja-app{
+  --bg:#14161B; --panel:#1C1F26; --panel2:#23272F; --border:#2E333D;
+  --text:#E8EAED; --muted:#969CA6; --accent:#FF7A18; --accent2:#FFA23E;
+  --teal:#2DD4BF; --green:#4ADE80; --red:#E5484D; --steel:#8A94A6;
+  --steel2:#5A6472; --amber:#FFC24B; --violet:#A78BFA;
+  background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  min-height:100%; padding:20px; line-height:1.4;
+}
+.mono{font-family:ui-monospace,"SF Mono","Roboto Mono","Cascadia Code",monospace;
+  font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto}
+
+.hdr{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.spark{width:40px;height:40px;flex:0 0 auto}
+.hdr h1{font-size:22px;font-weight:800;letter-spacing:-0.02em}
+.hdr .brand{color:var(--accent);font-weight:800}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 22px 54px}
+
+.grid{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.sticky{position:static}}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  padding:18px;margin-bottom:16px}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:0.08em;
+  color:var(--muted);font-weight:700;margin-bottom:14px;display:flex;
+  align-items:center;gap:8px}
+.card h2::before{content:"";width:8px;height:8px;border-radius:2px;
+  background:var(--accent)}
+
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+@media(max-width:520px){.fields{grid-template-columns:1fr}}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;
+  font-weight:500}
+.inp{position:relative;display:flex;align-items:center;background:var(--panel2);
+  border:1px solid var(--border);border-radius:9px;overflow:hidden;
+  transition:border-color .15s}
+.inp:focus-within{border-color:var(--accent)}
+.inp input{flex:1;background:transparent;border:0;color:var(--text);
+  padding:9px 10px;font-size:14px;width:100%;outline:none;
+  font-family:ui-monospace,"SF Mono",monospace;font-variant-numeric:tabular-nums}
+.inp .unit{padding:0 10px;font-size:11px;color:var(--muted);
+  border-left:1px solid var(--border);white-space:nowrap;
+  background:rgba(255,255,255,.02);align-self:stretch;display:flex;align-items:center}
+.inp input::-webkit-outer-spin-button,.inp input::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0}
+.inp input[type=number]{-moz-appearance:textfield}
+
+.slider-row label{display:flex;justify-content:space-between;font-size:12px;
+  color:var(--muted);margin-bottom:6px}
+.slider-row label b{color:var(--accent2);font-family:ui-monospace,monospace}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:6px;
+  background:var(--panel2);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;
+  height:18px;border-radius:50%;background:var(--accent);border:2px solid #14161B;
+  box-shadow:0 0 0 1px var(--accent)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;
+  background:var(--accent);border:2px solid #14161B}
+.slider-row{margin-bottom:14px}
+.slider-row:last-child{margin-bottom:0}
+
+/* ---- Painel resultado ---- */
+.sticky{position:sticky;top:20px}
+.result{background:linear-gradient(160deg,#20232B,#191B21);
+  border:1px solid var(--border);border-radius:16px;padding:20px;overflow:hidden}
+.price-hero{text-align:center;padding:8px 0 16px;position:relative}
+.price-hero .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);font-weight:700}
+.price-hero .val{font-size:44px;font-weight:800;letter-spacing:-0.02em;
+  margin-top:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.price-hero .val.mono{font-family:ui-monospace,"SF Mono",monospace}
+.qty-note{font-size:12px;color:var(--muted);margin-top:4px}
+
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;margin:14px 0 16px;
+  background:var(--panel2)}
+.bar span{display:block;height:100%}
+
+.rows{display:flex;flex-direction:column;gap:2px}
+.row{display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;font-size:13px}
+.row .k{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.row .k .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.row .v{font-family:ui-monospace,"SF Mono",monospace;font-variant-numeric:tabular-nums}
+.row.sub{border-top:1px solid var(--border);margin-top:4px;padding-top:9px}
+.row.sub .k{color:var(--text);font-weight:600}
+.row.sub .v{font-weight:600}
+.row.total{border-top:2px solid var(--border);margin-top:6px;padding-top:11px}
+.row.total .k{color:var(--text);font-weight:800;font-size:14px}
+.row.total .v{font-weight:800;font-size:16px;color:var(--accent2)}
+.pos{color:var(--green)!important}
+
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.mini .box{background:var(--panel2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px}
+.mini .box .t{font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);font-weight:600}
+.mini .box .n{font-size:16px;font-weight:700;margin-top:3px;
+  font-family:ui-monospace,monospace}
+
+.copy{width:100%;margin-top:16px;background:var(--accent);color:#14161B;
+  border:0;border-radius:10px;padding:12px;font-size:14px;font-weight:700;
+  cursor:pointer;transition:background .15s,transform .1s}
+.copy:hover{background:var(--accent2)}
+.copy:active{transform:scale(.985)}
+.copy.done{background:var(--green)}
+.btns{display:flex;gap:10px;margin-top:16px}
+.btns .copy{margin-top:0;flex:1}
+.copy.sec{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.copy.sec:hover{background:rgba(255,122,24,.12)}
+
+.foot{font-size:11px;color:var(--muted);margin-top:14px;text-align:center;
+  line-height:1.5}
+.addpeca{width:100%;margin-top:16px;background:transparent;color:var(--teal);
+  border:1px dashed var(--teal);border-radius:10px;padding:11px;font-size:13px;
+  font-weight:700;cursor:pointer;transition:background .15s}
+.addpeca:hover{background:rgba(45,212,191,.10)}
+.pecas{margin-top:14px;border:1px solid var(--border);border-radius:10px;
+  background:var(--panel2);overflow:hidden}
+.pecas .ph{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--border)}
+.pecarow{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:12px;
+  border-bottom:1px solid var(--border)}
+.pecarow:last-of-type{border-bottom:0}
+.pecarow .pn{flex:1;min-width:0}
+.pecarow .pn b{display:block;color:var(--text);font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pecarow .pn span{color:var(--muted);font-size:11px}
+.pecarow .pv{font-family:ui-monospace,monospace;font-weight:600}
+.pecarow .px{background:transparent;border:0;color:var(--red);cursor:pointer;
+  font-size:17px;line-height:1;padding:2px 5px;border-radius:5px}
+.pecarow .px:hover{background:rgba(229,72,77,.15)}
+.pecas .pt{display:flex;justify-content:space-between;padding:10px 12px;
+  font-weight:700;background:rgba(255,122,24,.08)}
+.pecas .pt .pv{font-family:ui-monospace,monospace;color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="forja-app">
+  <div class="wrap">
+    <div class="hdr">
+      <svg class="spark" viewBox="0 0 48 48" fill="none">
+        <rect x="6" y="30" width="36" height="7" rx="2" fill="#5A6472"></rect>
+        <rect x="10" y="37" width="8" height="6" fill="#3A414C"></rect>
+        <rect x="30" y="37" width="8" height="6" fill="#3A414C"></rect>
+        <path d="M24 6 L28 18 L24 15 L20 18 Z" fill="#FF7A18"></path>
+        <path d="M24 4 L26 14 L24 12 L22 14 Z" fill="#FFC24B"></path>
+        <path d="M14 26 h20 l-3 4 H17 Z" fill="#8A94A6"></path>
+      </svg>
+      <div><h1><span class="brand">FORJA</span> · Precificação 3D</h1></div>
+    </div>
+    <p class="sub">Calculadora de orçamento para impressão FDM — ajuste os parâmetros ao seu equipamento.</p>
+
+    <div class="grid">
+      <!-- ENTRADAS -->
+      <div>
+        <div class="card">
+          <h2>Material</h2>
+          <div class="fields">
+            <div class="field"><label>Peso da peça</label><div class="inp"><input type="number" inputmode="decimal" id="pesoPeca" value="50"><span class="unit">g</span></div></div>
+            <div class="field"><label>Preço do filamento</label><div class="inp"><input type="number" inputmode="decimal" id="precoFilamento" value="120"><span class="unit">R$/kg</span></div></div>
+          </div>
+          <div style="margin-top:16px">
+            <div class="slider-row"><label>Desperdício (suporte + purga)<b id="desperdicioL">5%</b></label>
+              <input type="range" min="0" max="40" step="1" id="desperdicio" value="5"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Impressão &amp; energia</h2>
+          <div class="fields">
+            <div class="field"><label>Tempo — horas</label><div class="inp"><input type="number" inputmode="decimal" id="tempoH" value="3"><span class="unit">h</span></div></div>
+            <div class="field"><label>Tempo — minutos</label><div class="inp"><input type="number" inputmode="decimal" id="tempoM" value="30"><span class="unit">min</span></div></div>
+            <div class="field"><label>Potência média</label><div class="inp"><input type="number" inputmode="decimal" id="potencia" value="150"><span class="unit">W</span></div></div>
+            <div class="field"><label>Preço da energia</label><div class="inp"><input type="number" inputmode="decimal" id="precoKwh" value="0.90"><span class="unit">R$/kWh</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Máquina (amortização)</h2>
+          <div class="fields">
+            <div class="field"><label>Custo da impressora</label><div class="inp"><input type="number" inputmode="decimal" id="custoMaquina" value="2500"><span class="unit">R$</span></div></div>
+            <div class="field"><label>Vida útil estimada</label><div class="inp"><input type="number" inputmode="decimal" id="vidaUtil" value="6000"><span class="unit">h</span></div></div>
+            <div class="field"><label>Manutenção por hora</label><div class="inp"><input type="number" inputmode="decimal" id="custoManutH" value="0.50"><span class="unit">R$/h</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Mão de obra</h2>
+          <div class="fields">
+            <div class="field"><label>Tempo de trabalho (setup + pós)</label><div class="inp"><input type="number" inputmode="decimal" id="maoObraMin" value="20"><span class="unit">min</span></div></div>
+            <div class="field"><label>Valor da hora de trabalho</label><div class="inp"><input type="number" inputmode="decimal" id="valorHora" value="40"><span class="unit">R$/h</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Ajustes de preço</h2>
+          <div class="slider-row"><label>Taxa de falha (reimpressão)<b id="falhaL">10%</b></label>
+            <input type="range" min="0" max="50" step="1" id="falha" value="10"></div>
+          <div class="slider-row"><label>Margem de lucro<b id="margemL">80%</b></label>
+            <input type="range" min="0" max="300" step="1" id="margem" value="80"></div>
+          <div class="slider-row"><label>Impostos sobre a venda<b id="impostosL">6%</b></label>
+            <input type="range" min="0" max="30" step="0.5" id="impostos" value="6"></div>
+          <div class="fields" style="margin-top:6px">
+            <div class="field"><label>Quantidade de peças</label><div class="inp"><input type="number" inputmode="numeric" step="1" id="qtd" value="1"><span class="unit">un</span></div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Dados do orçamento</h2>
+          <div class="field" style="margin-bottom:12px"><label>Título do orçamento (opcional)</label>
+            <div class="inp"><input type="text" id="titulo" placeholder="Orçamento de Impressão 3D"></div></div>
+          <div class="fields">
+            <div class="field"><label>Nome do cliente</label><div class="inp"><input type="text" id="nomeCliente" placeholder="Cliente"></div></div>
+            <div class="field"><label>Telefone de contato</label><div class="inp"><input type="text" id="telefone" placeholder="Não informado"></div></div>
+          </div>
+          <div class="fields" style="margin-top:12px">
+            <div class="field"><label>Responsável (uso interno)</label><div class="inp"><input type="text" id="responsavel" placeholder="Não informado"></div></div>
+            <div class="field"><label>Prazo de entrega</label><div class="inp"><input type="text" id="prazo" value="3 dias úteis" placeholder="3 dias úteis"></div></div>
+          </div>
+          <div class="fields" style="margin-top:12px">
+            <div class="field"><label>Tipo de material</label><div class="inp"><input type="text" id="tipoMaterial" placeholder="PLA"></div></div>
+            <div class="field"><label>Cor</label><div class="inp"><input type="text" id="cor" placeholder="Ex.: Preto"></div></div>
+          </div>
+          <div class="field" style="margin-top:12px"><label>Descrição da peça (opcional)</label>
+            <div class="inp"><input type="text" id="descricaoPeca" placeholder="Ex.: Suporte de bancada"></div></div>
+        </div>
+
+        <div class="card">
+          <h2>Opcionais — embalagem, frete e venda</h2>
+          <div class="fields">
+            <div class="field"><label>Embalagem (por peça)</label><div class="inp"><input type="number" inputmode="decimal" id="embalagem" value="0"><span class="unit">R$</span></div></div>
+            <div class="field"><label>Taxa fixa da plataforma (por pedido)</label><div class="inp"><input type="number" inputmode="decimal" id="taxaFixa" value="0"><span class="unit">R$</span></div></div>
+          </div>
+          <div style="margin-top:16px">
+            <div class="slider-row"><label>Frete (% do valor total)<b id="freteL">0%</b></label>
+              <input type="range" min="0" max="30" step="0.5" id="frete" value="0"></div>
+            <div class="slider-row"><label>Comissão da plataforma de venda<b id="comissaoL">0%</b></label>
+              <input type="range" min="0" max="30" step="0.5" id="comissao" value="0"></div>
+            <div class="slider-row"><label>Taxa da máquina de cartão<b id="taxaCartaoL">0%</b></label>
+              <input type="range" min="0" max="15" step="0.5" id="taxaCartao" value="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTADO -->
+      <div class="sticky">
+        <div class="result">
+          <div class="price-hero">
+            <div class="lbl">Preço por peça</div>
+            <div class="val mono" id="heroPrice">R$ 0,00</div>
+            <div class="qty-note" id="qtyNote" style="display:none"></div>
+          </div>
+          <div class="bar" id="bar"></div>
+          <div class="rows" id="rows"></div>
+          <div class="mini">
+            <div class="box"><div class="t">Custo / peça</div><div class="n" id="miniCusto">—</div></div>
+            <div class="box"><div class="t">Lucro / peça</div><div class="n" id="miniLucro" style="color:#4ADE80">—</div></div>
+            <div class="box"><div class="t">Markup</div><div class="n" id="miniMarkup">—</div></div>
+            <div class="box"><div class="t">R$ / hora impressa</div><div class="n" id="miniHora">—</div></div>
+          </div>
+
+          <button class="addpeca" id="btnAdd">＋ Adicionar esta peça ao orçamento</button>
+          <div id="pecasWrap"></div>
+
+          <button class="copy" id="btnCopiar">Copiar orçamento</button>
+          <div class="btns">
+            <button class="copy sec" id="btnCli">PDF p/ cliente</button>
+            <button class="copy sec" id="btnInt">PDF interno</button>
+          </div>
+          <button class="copy sec" id="btnAmbos">Exportar ambos (.zip: cliente + interno)</button>
+
+          <div class="foot">
+            Amortização = custo da máquina ÷ vida útil × tempo.<br>
+            Frete, comissão e impostos incidem sobre a venda (gross-up).<br>
+            Taxa fixa é por pedido, diluída pela quantidade.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Logo (cinza comprimido + FlateDecode) embutido =====
+const LOGO = { w: 360, h: 267, data: "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" };
+
+// ===== Utilitários =====
+const $ = (id) => document.getElementById(id);
+const num = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : 0; };
+const brl = (n) => (isFinite(n) ? n : 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const escHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+let pecas = []; // peças adicionadas ao mesmo orçamento
+
+// ===== Cálculo =====
+function computar() {
+  const desperdicio = num($("desperdicio").value), falha = num($("falha").value),
+    margem = num($("margem").value), impostos = num($("impostos").value),
+    frete = num($("frete").value), comissao = num($("comissao").value), taxaCartao = num($("taxaCartao").value);
+  const tTotal = num($("tempoH").value) + num($("tempoM").value) / 60;
+  const material = (num($("pesoPeca").value) / 1000) * num($("precoFilamento").value) * (1 + desperdicio / 100);
+  const energia = (num($("potencia").value) / 1000) * tTotal * num($("precoKwh").value);
+  const vidaUtil = num($("vidaUtil").value);
+  const deprec = vidaUtil > 0 ? (num($("custoMaquina").value) / vidaUtil) * tTotal : 0;
+  const manut = num($("custoManutH").value) * tTotal;
+  const maoObra = (num($("maoObraMin").value) / 60) * num($("valorHora").value);
+  const direto = material + energia + deprec + manut + maoObra;
+  const provFalha = direto * (falha / 100);
+  const custoProducao = direto + provFalha;
+  const emb = num($("embalagem").value);
+  const custoBase = custoProducao + emb;
+  const lucro = custoBase * (margem / 100);
+  const precoProduto = custoBase + lucro;
+  const q = Math.max(1, Math.round(num($("qtd").value)) || 1);
+  const taxaFixaPeca = num($("taxaFixa").value) / q;
+  const encargosPct = Math.min(impostos + comissao + frete + taxaCartao, 99);
+  const netNeeded = precoProduto + taxaFixaPeca;
+  const precoFinal = encargosPct > 0 ? netNeeded / (1 - encargosPct / 100) : netNeeded;
+  const valorFrete = precoFinal * (frete / 100);
+  const valorCartao = precoFinal * (taxaCartao / 100);
+  const valorImposto = precoFinal * (impostos / 100);
+  const valorComissao = precoFinal * (comissao / 100);
+  const custoTotal = precoFinal - lucro;
+  return {
+    tTotal, material, energia, deprec, manut, maoObra, direto, provFalha, custoProducao,
+    emb, custoBase, lucro, precoProduto, valorFrete, taxaFixaPeca, valorComissao, valorCartao,
+    valorImposto, precoFinal, custoTotal, q, loteFinal: precoFinal * q, loteLucro: lucro * q,
+    markup: custoTotal > 0 ? precoFinal / custoTotal : 0,
+  };
+}
+
+// ===== Snapshot da peça atual =====
+function snapAtual() {
+  const c = computar();
+  return {
+    desc: $("descricaoPeca").value.trim() || ("Peça " + (pecas.length + 1)),
+    mat: $("tipoMaterial").value.trim(), cor: $("cor").value.trim(),
+    q: c.q, precoFinal: c.precoFinal, loteFinal: c.loteFinal,
+    custoTotal: c.custoTotal, lucro: c.lucro, markup: c.markup,
+    material: c.material, energia: c.energia, deprec: c.deprec, manut: c.manut,
+    maoObra: c.maoObra, direto: c.direto, provFalha: c.provFalha, emb: c.emb,
+    custoBase: c.custoBase, valorFrete: c.valorFrete, taxaFixaPeca: c.taxaFixaPeca,
+    valorComissao: c.valorComissao, valorCartao: c.valorCartao, valorImposto: c.valorImposto,
+    pesoPeca: num($("pesoPeca").value), tempoH: num($("tempoH").value), tempoM: num($("tempoM").value),
+    falha: num($("falha").value), margem: num($("margem").value), frete: num($("frete").value),
+    comissao: num($("comissao").value), taxaCartao: num($("taxaCartao").value), impostos: num($("impostos").value),
+  };
+}
+
+// ===== Render do painel =====
+function labelPct(id) { $(id + "L").textContent = num($(id).value) + "%"; }
+function updateSliderLabels() {
+  ["desperdicio", "falha", "margem", "impostos", "frete", "comissao", "taxaCartao"].forEach(labelPct);
+}
+
+function rowHTML(dotCor, k, v, pos) {
+  const dot = dotCor ? '<span class="dot" style="background:' + dotCor + '"></span>' : "";
+  return '<div class="row"><span class="k">' + dot + k + '</span><span class="v' + (pos ? " pos" : "") + '">' + brl(v) + "</span></div>";
+}
+
+function render() {
+  const c = computar();
+  const falha = num($("falha").value), margem = num($("margem").value), impostos = num($("impostos").value),
+    frete = num($("frete").value), comissao = num($("comissao").value), taxaCartao = num($("taxaCartao").value);
+
+  const seg = [
+    ["Material", c.material, "#FF7A18"], ["Energia", c.energia, "#FFC24B"],
+    ["Depreciação", c.deprec, "#8A94A6"], ["Manutenção", c.manut, "#5A6472"],
+    ["Mão de obra", c.maoObra, "#2DD4BF"], ["Provisão de falha", c.provFalha, "#E5484D"],
+    ["Embalagem", c.emb, "#B08968"], ["Lucro", c.lucro, "#4ADE80"],
+    ["Taxa fixa", c.taxaFixaPeca, "#C084FC"], ["Frete", c.valorFrete, "#38BDF8"],
+    ["Comissão", c.valorComissao, "#F472B6"], ["Cartão", c.valorCartao, "#EAB308"],
+    ["Impostos", c.valorImposto, "#A78BFA"],
+  ];
+
+  $("heroPrice").textContent = brl(c.precoFinal);
+  if (c.q > 1) { $("qtyNote").style.display = ""; $("qtyNote").innerHTML = "Lote de " + c.q + ': <b class="mono">' + brl(c.loteFinal) + "</b>"; }
+  else $("qtyNote").style.display = "none";
+
+  $("bar").innerHTML = seg.filter((s) => c.precoFinal > 0 && s[1] > 0)
+    .map((s) => '<span style="width:' + (s[1] / c.precoFinal) * 100 + "%;background:" + s[2] + '" title="' + s[0] + ": " + brl(s[1]) + '"></span>').join("");
+
+  let h = "";
+  h += rowHTML("#FF7A18", "Material", c.material);
+  h += rowHTML("#FFC24B", "Energia", c.energia);
+  h += rowHTML("#8A94A6", "Depreciação", c.deprec);
+  h += rowHTML("#5A6472", "Manutenção", c.manut);
+  h += rowHTML("#2DD4BF", "Mão de obra", c.maoObra);
+  h += '<div class="row sub"><span class="k">Custo direto</span><span class="v">' + brl(c.direto) + "</span></div>";
+  h += rowHTML("#E5484D", "Provisão de falha (" + falha + "%)", c.provFalha);
+  if (c.emb > 0) h += rowHTML("#B08968", "Embalagem", c.emb);
+  h += '<div class="row sub"><span class="k">Custo do produto</span><span class="v">' + brl(c.custoBase) + "</span></div>";
+  h += rowHTML("#4ADE80", "Lucro (" + margem + "%)", c.lucro, true);
+  if (c.taxaFixaPeca > 0) h += rowHTML("#C084FC", "Taxa fixa" + (c.q > 1 ? " (por peça)" : ""), c.taxaFixaPeca);
+  if (c.valorFrete > 0) h += rowHTML("#38BDF8", "Frete (" + frete + "%)", c.valorFrete);
+  if (c.valorComissao > 0) h += rowHTML("#F472B6", "Comissão (" + comissao + "%)", c.valorComissao);
+  if (c.valorCartao > 0) h += rowHTML("#EAB308", "Cartão (" + taxaCartao + "%)", c.valorCartao);
+  if (c.valorImposto > 0) h += rowHTML("#A78BFA", "Impostos (" + impostos + "%)", c.valorImposto);
+  h += '<div class="row total"><span class="k">Preço final</span><span class="v">' + brl(c.precoFinal) + "</span></div>";
+  $("rows").innerHTML = h;
+
+  $("miniCusto").textContent = brl(c.custoTotal);
+  $("miniLucro").textContent = brl(c.lucro);
+  $("miniMarkup").textContent = c.markup.toFixed(2) + "×";
+  $("miniHora").textContent = brl(c.tTotal > 0 ? c.precoFinal / c.tTotal : 0);
+}
+
+// ===== Lista de peças =====
+function renderPecas() {
+  const wrap = $("pecasWrap");
+  if (pecas.length === 0) { wrap.innerHTML = ""; return; }
+  const total = pecas.reduce((s, p) => s + p.loteFinal, 0);
+  const rows = pecas.map((p, i) => {
+    const mc = [p.mat, p.cor].filter(Boolean).join(" · ");
+    const sub = (mc ? mc + " · " : "") + p.q + " un × " + brl(p.precoFinal);
+    return '<div class="pecarow"><div class="pn"><b>' + (i + 1) + ". " + escHtml(p.desc) + "</b><span>" + escHtml(sub) +
+      '</span></div><div class="pv">' + brl(p.loteFinal) + '</div><button class="px" data-i="' + i + '" title="Remover">×</button></div>';
+  }).join("");
+  wrap.innerHTML = '<div class="pecas"><div class="ph">Peças no orçamento (' + pecas.length + ")</div>" + rows +
+    '<div class="pt"><span>Total do orçamento</span><span class="pv">' + brl(total) + "</span></div></div>" +
+    '<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;line-height:1.5">Os PDFs incluirão as ' +
+    pecas.length + " peça(s) acima. A peça em edição só entra depois de adicionada.</div>";
+  wrap.querySelectorAll(".px").forEach((b) => b.addEventListener("click", () => { pecas.splice(+b.dataset.i, 1); renderPecas(); }));
+}
+
+// ===== Copiar orçamento (texto) =====
+async function copiar() {
+  const nomeCliente = $("nomeCliente").value, telefone = $("telefone").value, prazo = $("prazo").value;
+  const linha = (rot, val) => (rot + " ").padEnd(20, ".") + " " + brl(val);
+  const matCor = (mat, co) => [mat && "Material: " + mat, co && "Cor: " + co].filter(Boolean).join("  |  ");
+  const itens = pecas.length ? pecas : [snapAtual()];
+
+  let corpo;
+  if (itens.length > 1) {
+    corpo = itens.map((it, i) => {
+      const mc = [it.mat, it.cor].filter(Boolean).join(" · ");
+      return (i + 1) + ". " + it.desc + (mc ? " (" + mc + ")" : "") + "\n   " + it.q + " un x " + brl(it.precoFinal) + " = " + brl(it.loteFinal);
+    }).join("\n");
+    corpo += "\n--------------------------------------------------------\n" + linha("TOTAL GERAL", itens.reduce((s, it) => s + it.loteFinal, 0));
+  } else {
+    const it = itens[0];
+    const opc = [];
+    if (it.emb > 0) opc.push(linha("Embalagem", it.emb));
+    if (it.taxaFixaPeca > 0) opc.push(linha(it.q > 1 ? "Taxa fixa (peça)" : "Taxa fixa", it.taxaFixaPeca));
+    if (it.valorFrete > 0) opc.push(linha("Frete (" + it.frete + "%)", it.valorFrete));
+    if (it.valorComissao > 0) opc.push(linha("Comissão (" + it.comissao + "%)", it.valorComissao));
+    if (it.valorCartao > 0) opc.push(linha("Cartão (" + it.taxaCartao + "%)", it.valorCartao));
+    if (it.valorImposto > 0) opc.push(linha("Impostos (" + it.impostos + "%)", it.valorImposto));
+    corpo =
+      linha("Material", it.material) + "\n" +
+      linha("Energia", it.energia) + "\n" +
+      linha("Depreciação", it.deprec) + "\n" +
+      linha("Manutenção", it.manut) + "\n" +
+      linha("Mão de obra", it.maoObra) + "\n" +
+      linha("Provisão falha", it.provFalha) + "\n" +
+      linha("Lucro (" + it.margem + "%)", it.lucro) + (opc.length ? "\n" + opc.join("\n") : "") + "\n" +
+      "--------------------------------------------------------\n" +
+      linha("PREÇO UNITÁRIO", it.precoFinal) + "\n" +
+      linha("TOTAL (" + it.q + "x)", it.loteFinal);
+  }
+
+  const hLines = ["Cliente: " + (nomeCliente.trim() || "Cliente") + "  |  Contato: " + (telefone.trim() || "Não informado")];
+  if (itens.length === 1) {
+    const it = itens[0];
+    const mc = matCor(it.mat, it.cor);
+    if (mc) hLines.push(mc);
+    hLines.push("Peça: " + it.pesoPeca + " g  |  Tempo: " + it.tempoH + "h" + it.tempoM + "min  |  Qtd: " + it.q);
+  }
+  hLines.push("Prazo de entrega: " + (prazo.trim() || "3 dias úteis"));
+
+  const txt =
+    "ORÇAMENTO — IMPRESSÃO 3D | Forja Indústria e Tecnologia\n" +
+    "--------------------------------------------------------\n" +
+    hLines.join("\n") + "\n\n" + corpo;
+
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e2) {}
+    document.body.removeChild(ta);
+  }
+  const btn = $("btnCopiar");
+  btn.textContent = "✓ Orçamento copiado"; btn.classList.add("done");
+  setTimeout(() => { btn.textContent = "Copiar orçamento"; btn.classList.remove("done"); }, 2000);
+}
+
+// ===== Geração do PDF =====
+function construirBytes(modo) {
+  const interno = modo === "interno";
+  const titulo = $("titulo").value, prazo = $("prazo").value, nomeCliente = $("nomeCliente").value,
+    telefone = $("telefone").value, responsavel = $("responsavel").value;
+  const tituloDoc = titulo.trim() || "Orçamento de Impressão 3D";
+  const prazoDoc = prazo.trim() || "3 dias úteis";
+  const clienteDoc = nomeCliente.trim() || "Cliente";
+  const contatoDoc = telefone.trim() || "Não informado";
+  const responsavelDoc = responsavel.trim() || "Não informado";
+  const dataStr = new Date().toLocaleDateString("pt-BR");
+  const A4W = 595.28, A4H = 841.89;
+  const left = 56, right = 539, size = 10;
+  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  const san = (s) => String(s).split("").map((ch) => (ch.charCodeAt(0) <= 255 ? ch : "?")).join("");
+  const cwFor = (sz) => 0.6 * sz;
+  const ops = [];
+  const put = (x, y, str, bold, sz) => ops.push("BT " + (bold ? "/F2" : "/F1") + " " + (sz || size) + " Tf " + x.toFixed(1) + " " + y.toFixed(1) + " Td (" + esc(san(str)) + ") Tj ET");
+  const putR = (xr, y, str, bold, sz) => put(xr - san(String(str)).length * cwFor(sz || size), y, str, bold, sz);
+  const putC = (cx, y, str, bold, sz) => put(cx - (san(String(str)).length * cwFor(sz || size)) / 2, y, str, bold, sz);
+  const rule = (y, w) => ops.push((w || 0.5) + " w " + left + " " + y.toFixed(1) + " m " + right + " " + y.toFixed(1) + " l S");
+  const matCorLinha = (mat, co) => {
+    if (mat && co) return "Material: " + mat + "  ·  Cor: " + co;
+    if (mat) return "Material: " + mat;
+    if (co) return "Cor: " + co;
+    return "";
+  };
+
+  const itens = pecas.length ? pecas : [snapAtual()];
+  const multi = itens.length > 1;
+  const it = itens[0];
+  const totalVenda = itens.reduce((s, x) => s + x.loteFinal, 0);
+  const totalCusto = itens.reduce((s, x) => s + x.custoTotal * x.q, 0);
+  const totalLucro = itens.reduce((s, x) => s + x.lucro * x.q, 0);
+
+  let y;
+  {
+    const Wd = interno ? 102 : 118, Hd = Wd * (LOGO.h / LOGO.w);
+    const tx = (A4W - Wd) / 2, ty = A4H - (interno ? 40 : 46) - Hd;
+    ops.push("q " + Wd.toFixed(2) + " 0 0 " + Hd.toFixed(2) + " " + tx.toFixed(2) + " " + ty.toFixed(2) + " cm /Im0 Do Q");
+    y = ty - (interno ? 20 : 26);
+    putC(A4W / 2, y, tituloDoc, false, 13); y -= 24;
+  }
+
+  const meta = [["Cliente: " + clienteDoc, "Data: " + dataStr]];
+  if (interno) {
+    meta.push(["Contato: " + contatoDoc, multi ? "" : "Qtd: " + it.q + "  ·  Peça: " + it.pesoPeca + " g  ·  " + it.tempoH + "h" + it.tempoM + "min"]);
+    meta.push(["Responsável: " + responsavelDoc, "Prazo de entrega: " + prazoDoc]);
+  } else {
+    meta.push(["Contato: " + contatoDoc, "Prazo de entrega: " + prazoDoc]);
+  }
+  if (!multi) { const mc = matCorLinha(it.mat, it.cor); if (mc) meta.push([mc, ""]); }
+  meta.forEach((r) => { put(left, y, r[0], false, 9); if (r[1]) putR(right, y, r[1], false, 9); y -= 13; });
+  y += 3; rule(y); y -= 18;
+
+  if (!multi && interno) {
+    const rows = [];
+    const add = (rot, val, tipo) => rows.push([rot, val, tipo || "item"]);
+    add("Material", it.material); add("Energia", it.energia); add("Depreciação", it.deprec);
+    add("Manutenção", it.manut); add("Mão de obra", it.maoObra); add("Custo direto", it.direto, "sub");
+    add("Provisão de falha (" + it.falha + "%)", it.provFalha);
+    if (it.emb > 0) add("Embalagem", it.emb);
+    add("Custo do produto", it.custoBase, "sub");
+    add("Lucro (" + it.margem + "%)", it.lucro);
+    if (it.taxaFixaPeca > 0) add("Taxa fixa" + (it.q > 1 ? " (por peça)" : ""), it.taxaFixaPeca);
+    if (it.valorFrete > 0) add("Frete (" + it.frete + "%)", it.valorFrete);
+    if (it.valorComissao > 0) add("Comissão (" + it.comissao + "%)", it.valorComissao);
+    if (it.valorCartao > 0) add("Cartão (" + it.taxaCartao + "%)", it.valorCartao);
+    if (it.valorImposto > 0) add("Impostos (" + it.impostos + "%)", it.valorImposto);
+    rows.forEach((r) => {
+      const bold = r[2] === "sub";
+      if (bold) rule(y + 11, 0.3);
+      put(left, y, r[0], bold); putR(right, y, brl(r[1]), bold); y -= 16;
+    });
+    y -= 2; rule(y, 1); y -= 20;
+    put(left, y, "PREÇO UNITÁRIO", true, 12); putR(right, y, brl(it.precoFinal), true, 12); y -= 20;
+    put(left, y, "TOTAL (" + it.q + "x)", true, 13); putR(right, y, brl(it.loteFinal), true, 13); y -= 26;
+    put(left, y, "Valores finais, com impostos e taxas já inclusos.", false, 9); y -= 16;
+    put(left, y, "USO INTERNO · Custo/peça " + brl(it.custoTotal) + " · Lucro " + brl(it.lucro) + " · Markup " + it.markup.toFixed(2) + "x", false, 8);
+  } else if (!multi) {
+    put(left, y, "Item", true); putR(right, y, "Valor unitário", true); y -= 16; rule(y + 11, 0.3);
+    put(left, y, it.desc, false); putR(right, y, brl(it.precoFinal), false); y -= 16;
+    put(left, y, "Quantidade", false); putR(right, y, it.q + " un", false); y -= 16;
+    y -= 2; rule(y, 1); y -= 22;
+    put(left, y, "TOTAL", true, 14); putR(right, y, brl(it.loteFinal), true, 14); y -= 34;
+    put(left, y, "Validade da proposta: 7 dias.", false, 9);
+  } else {
+    put(left, y, "Peça", true); putR(right, y, "Subtotal", true); y -= 16; rule(y + 11, 0.3);
+    itens.forEach((x, i) => {
+      put(left, y, (i + 1) + ". " + x.desc, false); putR(right, y, brl(x.loteFinal), false); y -= 13;
+      const mc = [x.mat, x.cor].filter(Boolean).join(" · ");
+      const info = [mc, x.q + " un x " + brl(x.precoFinal)]
+        .concat(interno ? ["custo " + brl(x.custoTotal) + "/un", "lucro " + brl(x.lucro) + "/un"] : [])
+        .filter(Boolean).join("  ·  ");
+      put(left + 12, y, info, false, 8); y -= 18;
+    });
+    y -= 2; rule(y, 1); y -= 22;
+    put(left, y, "TOTAL GERAL", true, 14); putR(right, y, brl(totalVenda), true, 14); y -= 30;
+    if (interno) {
+      put(left, y, "Valores finais, com impostos e taxas já inclusos.", false, 9); y -= 16;
+      put(left, y, "USO INTERNO · Custo total " + brl(totalCusto) + " · Lucro total " + brl(totalLucro), false, 8);
+    } else {
+      put(left, y, "Validade da proposta: 7 dias.", false, 9);
+    }
+  }
+
+  const content = ops.join("\n");
+  const objs = [];
+  objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objs[2] = "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
+  objs[3] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + A4W.toFixed(2) + " " + A4H.toFixed(2) + "] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Im0 7 0 R >> >> /Contents 4 0 R >>";
+  objs[4] = "<< /Length " + content.length + " >>\nstream\n" + content + "\nendstream";
+  objs[5] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>";
+  objs[6] = "<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>";
+  const imgBin = atob(LOGO.data);
+  objs[7] = "<< /Type /XObject /Subtype /Image /Width " + LOGO.w + " /Height " + LOGO.h + " /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length " + imgBin.length + " >>\nstream\n" + imgBin + "\nendstream";
+  const N = 7;
+
+  let pdf = "%PDF-1.4\n";
+  const off = [];
+  for (let i = 1; i <= N; i++) { off[i] = pdf.length; pdf += i + " 0 obj\n" + objs[i] + "\nendobj\n"; }
+  const xref = pdf.length;
+  pdf += "xref\n0 " + (N + 1) + "\n0000000000 65535 f \n";
+  for (let i = 1; i <= N; i++) pdf += String(off[i]).padStart(10, "0") + " 00000 n \n";
+  pdf += "trailer\n<< /Size " + (N + 1) + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF";
+
+  const bytes = new Uint8Array(pdf.length);
+  for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
+  return bytes;
+}
+
+function baixar(bytes, nome, tipo) {
+  const blob = new Blob([bytes], { type: tipo });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nome; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+const nomeArq = (modo) => "orcamento-forja-" + modo + "-" + new Date().toISOString().slice(0, 10) + ".pdf";
+const exportarPDF = (modo) => baixar(construirBytes(modo), nomeArq(modo), "application/pdf");
+
+// ===== ZIP (stored) com os dois PDFs =====
+function criarZip(files) {
+  const tabela = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let cc = n; for (let k = 0; k < 8; k++) cc = cc & 1 ? 0xedb88320 ^ (cc >>> 1) : cc >>> 1; t[n] = cc >>> 0; }
+    return t;
+  })();
+  const crc32 = (b) => { let cc = 0xffffffff; for (let i = 0; i < b.length; i++) cc = tabela[(cc ^ b[i]) & 0xff] ^ (cc >>> 8); return (cc ^ 0xffffffff) >>> 0; };
+  const enc = (s) => { const a = []; for (let i = 0; i < s.length; i++) a.push(s.charCodeAt(i) & 0xff); return a; };
+  const u16 = (n) => [n & 0xff, (n >>> 8) & 0xff];
+  const u32 = (n) => [n & 0xff, (n >>> 8) & 0xff, (n >>> 16) & 0xff, (n >>> 24) & 0xff];
+
+  const locais = [], central = [], offsets = [];
+  let offset = 0;
+  files.forEach((f) => {
+    const nome = enc(f.name), data = f.bytes, crc = crc32(data), size = data.length;
+    offsets.push(offset);
+    const h = [].concat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(size), u32(size), u16(nome.length), u16(0), nome);
+    locais.push(Uint8Array.from(h), data);
+    offset += h.length + size;
+  });
+  const centralStart = offset;
+  let centralSize = 0;
+  files.forEach((f, i) => {
+    const nome = enc(f.name), data = f.bytes, crc = crc32(data), size = data.length;
+    const cd = [].concat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(size), u32(size), u16(nome.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offsets[i]), nome);
+    central.push(Uint8Array.from(cd));
+    centralSize += cd.length;
+  });
+  const eocd = Uint8Array.from([].concat(u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length), u32(centralSize), u32(centralStart), u16(0)));
+  const total = offset + centralSize + eocd.length;
+  const out = new Uint8Array(total);
+  let pos = 0;
+  for (const p of locais) { out.set(p, pos); pos += p.length; }
+  for (const p of central) { out.set(p, pos); pos += p.length; }
+  out.set(eocd, pos);
+  return out;
+}
+
+function exportarAmbos() {
+  const data = new Date().toISOString().slice(0, 10);
+  const zip = criarZip([
+    { name: "orcamento-cliente-" + data + ".pdf", bytes: construirBytes("cliente") },
+    { name: "orcamento-interno-" + data + ".pdf", bytes: construirBytes("interno") },
+  ]);
+  baixar(zip, "orcamento-forja-" + data + ".zip", "application/zip");
+}
+
+// ===== Wiring =====
+document.querySelectorAll("input").forEach((el) =>
+  el.addEventListener("input", () => { updateSliderLabels(); render(); })
+);
+$("btnAdd").addEventListener("click", () => { pecas.push(snapAtual()); renderPecas(); });
+$("btnCopiar").addEventListener("click", copiar);
+$("btnCli").addEventListener("click", () => exportarPDF("cliente"));
+$("btnInt").addEventListener("click", () => exportarPDF("interno"));
+$("btnAmbos").addEventListener("click", exportarAmbos);
+
+updateSliderLabels();
+render();
+renderPecas();
+</script>
+</body>
+</html>
